@@ -1,0 +1,188 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- GLOBAL HARDENED HELPERS ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- VALIDATION HELPERS ---
+    function isValidUserProfile(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.userId == request.auth.uid &&
+             data.displayName is string &&
+             data.displayName.size() >= 1 &&
+             data.displayName.size() <= 80 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 160)) &&
+             (!('photoUrl' in data) || (data.photoUrl is string && data.photoUrl.size() <= 500)) &&
+             data.preferredFormat in ['POSTER_3_4', 'SQUARE_1_1', 'BANNER_16_9', 'STORY_9_16', 'FLYER_4_5'] &&
+             data.createdAt is timestamp &&
+             data.createdAt <= request.time &&
+             data.updatedAt is timestamp &&
+             data.updatedAt <= request.time;
+    }
+
+    function isValidDesignProject(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.userId == request.auth.uid &&
+             data.title is string &&
+             data.title.size() >= 1 &&
+             data.title.size() <= 100 &&
+             data.category in ['POSTER', 'BANNER', 'SOCIAL', 'STORY', 'PHOTO_EDIT'] &&
+             data.aspectRatio in ['3:4', '1:1', '16:9', '9:16', '4:5'] &&
+             data.backgroundType in ['GRADIENT', 'SOLID', 'TEMPLATE_RES', 'LOCAL_IMAGE'] &&
+             data.backgroundColorHex is string &&
+             data.backgroundColorHex.size() >= 4 &&
+             data.backgroundColorHex.size() <= 12 &&
+             data.secondaryColorHex is string &&
+             data.secondaryColorHex.size() >= 4 &&
+             data.secondaryColorHex.size() <= 12 &&
+             (!('templateResKey' in data) || (data.templateResKey is string && data.templateResKey.size() <= 64)) &&
+             (!('localImagePath' in data) || (data.localImagePath is string && data.localImagePath.size() <= 300)) &&
+             data.filterPreset in ['ORIGINAL', 'VIVID', 'NOIR', 'WARM_FILM', 'COOL_STUDIO', 'DUOTONE'] &&
+             data.brightness is number && data.brightness >= -1 && data.brightness <= 1 &&
+             data.contrast is number && data.contrast >= 0.5 && data.contrast <= 2 &&
+             data.saturation is number && data.saturation >= 0 && data.saturation <= 2 &&
+             data.overlayOpacity is number && data.overlayOpacity >= 0 && data.overlayOpacity <= 0.85 &&
+             data.layers is list &&
+             data.layers.size() <= 25 &&
+             (data.layers.size() == 0 || data.layers[0] is map) &&
+             data.favorite is bool &&
+             data.createdAt is timestamp &&
+             data.createdAt <= request.time &&
+             data.updatedAt is timestamp &&
+             data.updatedAt <= request.time;
+    }
+
+    function isValidAiGenerationRecord(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.userId == request.auth.uid &&
+             data.mode in ['POSTER_BANNER', 'PHOTO_EDIT', 'COPYWRITER'] &&
+             data.prompt is string &&
+             data.prompt.size() >= 1 &&
+             data.prompt.size() <= 1000 &&
+             data.stylePreset is string &&
+             data.stylePreset.size() >= 1 &&
+             data.stylePreset.size() <= 60 &&
+             data.aspectRatio is string &&
+             data.aspectRatio.size() >= 1 &&
+             data.aspectRatio.size() <= 16 &&
+             (!('resultSummary' in data) || (data.resultSummary is string && data.resultSummary.size() <= 2000)) &&
+             (!('localImagePath' in data) || (data.localImagePath is string && data.localImagePath.size() <= 300)) &&
+             data.createdAt is timestamp &&
+             data.createdAt <= request.time;
+    }
+
+    // --- USER PROFILE ---
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll(['userId', 'displayName', 'preferredFormat', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'displayName', 'email', 'photoUrl', 'preferredFormat', 'createdAt', 'updatedAt']) &&
+                       isValidUserProfile(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'email', 'photoUrl', 'preferredFormat', 'updatedAt']);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      // --- DESIGN PROJECTS SUBCOLLECTION ---
+      match /projects/{projectId} {
+        allow get: if isOwner(userId) && isValidId(projectId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(projectId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'title', 'category', 'aspectRatio', 'backgroundType',
+                           'backgroundColorHex', 'secondaryColorHex', 'filterPreset',
+                           'brightness', 'contrast', 'saturation', 'overlayOpacity',
+                           'layers', 'favorite', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'title', 'category', 'aspectRatio', 'backgroundType',
+                           'backgroundColorHex', 'secondaryColorHex', 'templateResKey',
+                           'localImagePath', 'filterPreset', 'brightness', 'contrast',
+                           'saturation', 'overlayOpacity', 'layers', 'favorite',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidDesignProject(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(projectId) &&
+                         isValidDesignProject(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         (
+                           // Action: Toggle Favorite
+                           incoming().diff(existing()).affectedKeys().hasOnly(['favorite', 'updatedAt']) ||
+                           // Action: Rename Project
+                           incoming().diff(existing()).affectedKeys().hasOnly(['title', 'updatedAt']) ||
+                           // Action: Save Canvas Edits
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'title', 'category', 'aspectRatio', 'backgroundType',
+                             'backgroundColorHex', 'secondaryColorHex', 'templateResKey',
+                             'localImagePath', 'filterPreset', 'brightness', 'contrast',
+                             'saturation', 'overlayOpacity', 'layers', 'favorite', 'updatedAt'
+                           ])
+                         );
+
+        allow delete: if isOwner(userId) && isValidId(projectId);
+      }
+
+      // --- AI GENERATIONS SUBCOLLECTION ---
+      match /ai_generations/{generationId} {
+        allow get: if isOwner(userId) && isValidId(generationId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(generationId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'mode', 'prompt', 'stylePreset', 'aspectRatio', 'createdAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'mode', 'prompt', 'stylePreset', 'aspectRatio',
+                           'resultSummary', 'localImagePath', 'createdAt'
+                         ]) &&
+                         isValidAiGenerationRecord(incoming(), userId);
+
+        allow update: if false;
+
+        allow delete: if isOwner(userId) && isValidId(generationId);
+      }
+    }
+  }
+}

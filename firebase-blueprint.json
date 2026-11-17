@@ -1,0 +1,202 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated PosterStudio creator profile and preferences.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name."
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address."
+        },
+        "photoUrl": {
+          "type": "string",
+          "description": "Profile avatar URL."
+        },
+        "preferredFormat": {
+          "type": "string",
+          "enum": ["POSTER_3_4", "SQUARE_1_1", "BANNER_16_9", "STORY_9_16", "FLYER_4_5"],
+          "description": "Default canvas format."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp written with FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp written with FieldValue.serverTimestamp()."
+        }
+      },
+      "required": ["userId", "displayName", "preferredFormat", "createdAt", "updatedAt"]
+    },
+    "DesignProject": {
+      "title": "DesignProject",
+      "description": "User-authored poster, banner, or edited photo canvas project.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner UID matching request.auth.uid."
+        },
+        "title": {
+          "type": "string",
+          "description": "Project title."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["POSTER", "BANNER", "SOCIAL", "STORY", "PHOTO_EDIT"],
+          "description": "Asset category."
+        },
+        "aspectRatio": {
+          "type": "string",
+          "enum": ["3:4", "1:1", "16:9", "9:16", "4:5"],
+          "description": "Canvas aspect ratio."
+        },
+        "backgroundType": {
+          "type": "string",
+          "enum": ["GRADIENT", "SOLID", "TEMPLATE_RES", "LOCAL_IMAGE"],
+          "description": "Source type for canvas background."
+        },
+        "backgroundColorHex": {
+          "type": "string",
+          "description": "Primary background hex color."
+        },
+        "secondaryColorHex": {
+          "type": "string",
+          "description": "Secondary gradient or accent hex color."
+        },
+        "templateResKey": {
+          "type": "string",
+          "description": "Optional bundled template drawable key."
+        },
+        "localImagePath": {
+          "type": "string",
+          "description": "Optional device-local path to generated or edited image."
+        },
+        "filterPreset": {
+          "type": "string",
+          "enum": ["ORIGINAL", "VIVID", "NOIR", "WARM_FILM", "COOL_STUDIO", "DUOTONE"],
+          "description": "Active color filter preset."
+        },
+        "brightness": {
+          "type": "number",
+          "description": "Brightness adjustment (-1.0 to 1.0)."
+        },
+        "contrast": {
+          "type": "number",
+          "description": "Contrast adjustment (0.5 to 2.0)."
+        },
+        "saturation": {
+          "type": "number",
+          "description": "Saturation adjustment (0.0 to 2.0)."
+        },
+        "overlayOpacity": {
+          "type": "number",
+          "description": "Scrim overlay opacity (0.0 to 0.85)."
+        },
+        "layers": {
+          "type": "array",
+          "description": "Ordered list of text and graphic shape layer maps (max 25)."
+        },
+        "favorite": {
+          "type": "boolean",
+          "description": "Whether project is starred by the user."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp written with FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Update timestamp written with FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "title",
+        "category",
+        "aspectRatio",
+        "backgroundType",
+        "backgroundColorHex",
+        "secondaryColorHex",
+        "filterPreset",
+        "brightness",
+        "contrast",
+        "saturation",
+        "overlayOpacity",
+        "layers",
+        "favorite",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AiGenerationRecord": {
+      "title": "AiGenerationRecord",
+      "description": "History entry for AI poster, banner, photo edit, or copywriter generation.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner UID matching request.auth.uid."
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["POSTER_BANNER", "PHOTO_EDIT", "COPYWRITER"],
+          "description": "AI tool mode used."
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Prompt submitted to Gemini."
+        },
+        "stylePreset": {
+          "type": "string",
+          "description": "Selected visual style preset."
+        },
+        "aspectRatio": {
+          "type": "string",
+          "description": "Requested aspect ratio."
+        },
+        "resultSummary": {
+          "type": "string",
+          "description": "Optional summary or generated copy snippet."
+        },
+        "localImagePath": {
+          "type": "string",
+          "description": "Optional device-local path to generated image."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp written with FieldValue.serverTimestamp()."
+        }
+      },
+      "required": ["userId", "mode", "prompt", "stylePreset", "aspectRatio", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user profile and studio preferences."
+    },
+    "/users/{userId}/projects/{projectId}": {
+      "schema": { "$ref": "#/entities/DesignProject" },
+      "description": "User's saved poster, banner, and photo edit projects."
+    },
+    "/users/{userId}/ai_generations/{generationId}": {
+      "schema": { "$ref": "#/entities/AiGenerationRecord" },
+      "description": "User's AI generation and photo editing history."
+    }
+  }
+}

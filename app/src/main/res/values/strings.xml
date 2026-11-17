@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">PosterStudio</string>
+    <string name="tagline_studio">AI Poster, Banner &amp; Photo Studio</string>
+    <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="sign_out">Sign out</string>
+    <string name="nav_home">Studio</string>
+    <string name="nav_ai_lab">AI Lab</string>
+    <string name="nav_templates">Templates</string>
+    <string name="nav_projects">Projects</string>
+    <string name="cd_hero_banner">Creative poster and banner studio showcase</string>
+    <string name="cd_user_avatar">Creator profile avatar</string>
+    <string name="cd_template_preview">Template preview artwork</string>
+    <string name="cd_generated_image">AI generated visual asset</string>
+    <string name="cd_picked_photo">Selected photo for editing</string>
+    <string name="error_empty_prompt">Please enter a creative prompt first.</string>
+    <string name="error_no_photo_selected">Pick a photo first to apply AI edits.</string>
+</resources>

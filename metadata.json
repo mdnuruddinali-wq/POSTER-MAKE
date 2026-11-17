@@ -1,0 +1,6 @@
+{
+  "name": "PosterStudio",
+  "description": "AI-powered poster, banner, and social media photo design studio for generating, editing, and exporting creative visual assets.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
